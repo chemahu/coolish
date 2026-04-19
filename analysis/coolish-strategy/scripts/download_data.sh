@@ -96,7 +96,8 @@ for entry in (files if isinstance(files, list) else [{"name": k, "sha256": v} fo
     if not os.path.exists(path):
         print(f"  [warn]  MISSING   {name}")
         continue
-    digest = hashlib.sha256(open(path, "rb").read()).hexdigest()
+    with open(path, "rb") as fh:
+        digest = hashlib.sha256(fh.read()).hexdigest()
     if digest == sha256:
         print(f"  [ok]    {name}")
     else:
