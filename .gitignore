@@ -1,0 +1,12 @@
+# Analysis data and outputs — never commit raw CSV or computed artefacts
+analysis/coolish-strategy/data/
+analysis/coolish-strategy/outputs/
+
+# Python bytecode
+*.pyc
+__pycache__/
+
+# Virtual environments
+.venv/
+venv/
+*.egg-info/
