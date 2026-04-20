@@ -1,0 +1,685 @@
+<!-- one-time artifact dump for human review, not for re-running pipeline -->
+# Pipeline Outputs Snapshot — `data-2026-04-17`
+
+> One-time artifact dump for human review. Regenerate with `make all DATA_TAG=data-2026-04-17`. Do NOT rely on this for downstream code — `outputs/` remains gitignored as the source of truth.
+
+- **Tag**: data-2026-04-17
+- **Generated**: 2026-04-20T06:48:03Z
+- **make all**: ✅ ends with `08 complete.`
+- **pytest**: ✅ 5/5 passed
+
+## 1. `outputs/strategy_spec.md`
+
+```markdown
+# Coolish-Style BTC Range-Pyramid Strategy — Specification
+
+> **Auto-generated** from the `data-` tag analysis pipeline.
+> All numbers derived from historical account data; none are hard-coded.
+
+---
+
+## 1. Approved Symbol Whitelist
+
+Only symbols with cumulative net PnL ≥ 0.1 XBT qualify:
+
+  - `AAVEUSDT` (alt_perp)
+  - `ALTMEXUSD` (alt_perp)
+  - `AXSUSDT` (alt_perp)
+  - `BMEX_USDT` (alt_perp)
+  - `BNBUSDT` (alt_perp)
+  - `DOGEUSD` (alt_perp)
+  - `DOGEUSDT` (alt_perp)
+  - `DOTUSDTH21` (quarterly)
+  - `ETHH21` (quarterly)
+  - `ETHM20` (quarterly)
+  - `ETHM21` (quarterly)
+  - `ETHM22` (quarterly)
+  - `ETHM23` (quarterly)
+  - `ETHM24` (quarterly)
+  - `ETHU20` (quarterly)
+  - `ETHU21` (quarterly)
+  - `ETHU22` (quarterly)
+  - `ETHUSD` (eth_perp)
+  - `ETHZ21` (quarterly)
+  - `ETHZ22` (quarterly)
+  - `ETHZ23` (quarterly)
+  - `LTCH21` (quarterly)
+  - `LTCU21` (quarterly)
+  - `LTCUSD` (alt_perp)
+  - `LTCZ20` (quarterly)
+  - `LUNAUSD` (alt_perp)
+  - `TRXH21` (quarterly)
+  - `TRXM20` (quarterly)
+  - `TRXM21` (quarterly)
+  - `TRXU20` (quarterly)
+  - `TRXU21` (quarterly)
+  - `UNIUSDT` (alt_perp)
+  - `XBTUSD` (xbt_perp)
+  - `XRPUSD` (alt_perp)
+  - `XTZUSDTZ20` (quarterly)
+  - `YFIUSDTH21` (quarterly)
+
+**Not-to-trade list:**
+- Any symbol not on the whitelist above
+- Quarterly / futures contracts (H/M/U/Z suffix) — historically near-zero or negative EV
+- New listings with < 90 days of history
+
+---
+
+## 2. Leverage Limit
+
+Maximum effective account leverage: **1×** (P95 of observed history, rounded up).
+
+- Keep liquidation price at least 3× current price away from entry.
+- Effective leverage = position notional / wallet balance; monitor after each fill.
+
+---
+
+## 3. Pyramid Entry Structure
+
+Based on XBTUSD episodes (median values):
+
+| Parameter | Value |
+|-----------|-------|
+| Layers per episode | 4.0 (median) |
+| Inter-layer price spacing | 0.0000% (median of medians) |
+| Average layer size | 12,121 contracts |
+| Episode notional | 2,665,519,700 USD |
+
+**Rules:**
+- Place all entry limit orders simultaneously before the market moves.
+- Use maker (limit) orders only; no market orders for entry.
+- Do not add new layers below the lowest planned layer (no martingale).
+- Direction change: cancel remaining unfilled entry orders immediately.
+
+---
+
+## 4. Pyramid Exit Structure
+
+- Mirror the entry pyramid symmetrically on the opposite side of the range.
+- Take profit in layers; leave a residual position (≤ 30%) to capture extended moves.
+- Use maker (limit) orders only for exits.
+- Cancel and re-set exit orders if the price range is structurally invalidated.
+
+---
+
+## 5. Risk Control Hard Rules
+
+### 5.1 Best Counterfactual Rule
+> Scenario 1 — Remove Net-Negative Symbols (delta = +8.1530 XBT)
+
+### 5.2 Per-Symbol Loss Limit
+- Cumulative net realised loss on any **non-core** symbol ≥ 2% of current wallet balance
+  → immediately close/cancel all positions and orders for that symbol.
+  → exclude that symbol from trading for **12 months**.
+
+### 5.3 Funding Crowding Filter
+- If 8h funding rate on XBTUSD > +0.05%: do **not** open new longs.
+- If 8h funding rate on XBTUSD < −0.05%: do **not** open new shorts.
+- This acts as a crowding / contrarian signal to avoid paying extreme funding.
+
+### 5.4 No Martingale
+- Absolutely no doubling down.  Every layer must have been pre-planned before
+  the episode started.
+
+---
+
+## 6. Cash-Flow Discipline
+
+Total funding net over all years: -0.9821 XBT (~-0.3274 XBT/year).  Monitor extreme funding rates as a crowding/contrarian signal.
+
+Historically averaged 9.44 XBT/year in withdrawals.
+
+**Rules:**
+- Withdraw a fixed percentage (e.g. 20–30%) of cumulative unrealised + realised gains
+  when equity reaches a new all-time high.
+- Do not reinvest withdrawn BTC back into the trading account.
+- Deposit only when account equity has fallen > 30% from the last withdrawal point
+  and a compelling new range has formed.
+
+---
+
+## 7. 'Do-Not-Do' List
+
+- ❌ Do not trade altcoin perpetuals not on the whitelist
+- ❌ Do not trade quarterly futures contracts
+- ❌ Do not use market orders for entry or exit
+- ❌ Do not martingale (add unplanned layers below entry range)
+- ❌ Do not hold a position through extreme funding (> 0.1% per 8h)
+- ❌ Do not chase price outside the pre-defined range
+- ❌ Do not automate execution without manual range-review checkpoints
+- ❌ Do not target short-term momentum; this strategy is mean-reversion / range
+
+---
+
+_Generated by `scripts/08_strategy_spec.py` — re-run `make 08` to refresh._
+
+```
+
+## 2. `outputs/roundtrip_stats.csv`
+
+```csv
+symbol,n_roundtrips,gross_pnl_xbt,fees_xbt,net_pnl_xbt,win_rate,avg_hold_hours,median_hold_hours,avg_qty,avg_gross_pnl_per_rt,profit_factor
+ETHUSD,17482,45.512365,1.530449,43.981916,0.580826,45.453167,16.401177,189.456355,0.002603,2.226952
+XBTUSD,97453,56.908703,15.023308,41.885396,0.483587,75.519390,18.112692,7067.411450,0.000584,1.171691
+BMEX_USDT,192,19.778680,0.014833,19.763847,0.640625,796.444314,63.464208,211281250.000000,0.103014,2.012453
+LTCUSD,6490,8.185486,0.106635,8.078851,0.606626,76.434808,56.742418,247.590909,0.001261,1.801530
+LUNAUSD,339,7.778321,0.000587,7.777734,0.790560,51.885503,35.686555,30.064897,0.022945,42.517605
+XRPUSD,5335,4.686650,0.172957,4.513693,0.586317,43.886761,8.518972,660.654171,0.000878,1.517711
+UNIUSDT,787,4.318912,-0.004875,4.323787,0.546379,127.548255,72.189773,63.711563,0.005488,2.314469
+ETHZ21,865,2.943694,-0.001052,2.944745,0.647399,286.362776,268.991861,165899421.965318,0.003403,3.185806
+DOGEUSD,3539,2.822277,0.037609,2.784668,0.639164,182.037645,115.822739,218.732693,0.000797,2.244504
+YFIUSDTH21,342,1.121816,0.002476,1.119340,0.713450,118.014607,162.028919,16.245614,0.003280,2.963797
+ETHM21,151,1.093470,0.001558,1.091912,0.980132,58.133907,27.418592,2.112583,0.007242,447.520533
+ETHH21,1068,0.936420,0.054686,0.881734,0.527154,139.430064,33.480469,5.154494,0.000877,1.206053
+AXSUSDT,817,0.842672,-0.006290,0.848962,0.548348,29.033106,20.915743,47.538556,0.001031,1.639725
+AAVEUSDT,398,0.814478,-0.000778,0.815255,0.713568,98.663504,64.644939,106.170854,0.002046,6.312718
+TRXM21,1445,0.810073,0.001643,0.808430,0.516263,52.663384,37.229077,9000.297578,0.000561,1.721453
+TRXH21,2185,0.776216,0.005968,0.770248,0.567506,77.850635,49.074103,15712.745080,0.000355,2.442168
+ETHU20,202,0.816720,0.118745,0.697975,0.891089,24.253147,16.670604,7.722772,0.004043,7.572020
+LTCZ20,775,0.638166,0.029917,0.608249,0.734194,61.092918,30.532937,13.941935,0.000823,2.063927
+ETHM23,344,0.540594,-0.001042,0.541635,0.811047,216.655880,120.106417,110319.767442,0.001571,14.187293
+TRXU20,748,0.764434,0.259183,0.505251,0.605615,27.945579,22.241113,62488.065508,0.001022,1.434913
+LTCH21,1331,0.498220,0.001682,0.496538,0.401953,146.685336,113.414195,8.045830,0.000374,1.842883
+ETHM24,280,0.494108,0.003368,0.490740,0.946429,756.215869,597.633428,58264.285714,0.001765,26.028319
+ETHM22,229,0.422272,0.001978,0.420293,0.812227,406.399082,425.260533,52602.620087,0.001844,4.951360
+BNBUSDT,107,0.415288,0.000631,0.414657,1.000000,131.472758,126.235427,72.971963,0.003881,inf
+DOGEUSDT,1693,0.420233,0.007023,0.413210,0.572947,66.094002,35.994717,189.163615,0.000248,2.649172
+ETHZ22,173,0.344192,0.001148,0.343044,0.953757,179.395787,182.996836,40462.427746,0.001990,63.140392
+TRXM20,124,0.347000,0.008223,0.338777,0.879032,97.649695,78.104519,44354.838710,0.002798,5.528144
+ETHM20,81,0.397540,0.059464,0.338076,0.604938,37.033775,36.110226,11.259259,0.004908,2.605670
+LTCU21,341,0.238165,-0.000325,0.238490,1.000000,29.236812,19.352623,5.700880,0.000698,inf
+DOTUSDTH21,44,0.236596,-0.000077,0.236673,0.863636,21.302178,21.356121,21.977273,0.005377,34.408585
+TRXU21,1742,0.229093,0.000551,0.228542,0.237084,206.048771,225.356952,5144.546498,0.000132,1.847670
+ETHZ23,268,0.233190,0.005306,0.227885,0.843284,174.506734,99.626798,50500.000000,0.000870,36.029180
+ETHU21,410,0.192080,0.000027,0.192053,0.500000,34.358633,21.031006,1.709756,0.000468,1.312110
+ALTMEXUSD,49,0.128896,0.000740,0.128156,1.000000,74.878688,74.662573,248.122449,0.002631,inf
+ETHU22,43,0.106832,0.000199,0.106633,1.000000,570.493021,584.152682,23023.255814,0.002484,inf
+XTZUSDTZ20,8,0.105900,0.002576,0.103324,1.000000,52.574163,42.962752,1750.000000,0.013238,inf
+ETHH24,29,0.078940,0.000548,0.078392,0.931034,588.175840,664.073459,58620.689655,0.002722,67.407270
+ETHU23,178,0.052815,0.004734,0.048081,0.730337,411.313817,450.043428,78224.719101,0.000297,2.064556
+LINKUSDT,222,0.044365,0.004224,0.040142,0.644144,35.860597,13.740337,29.009009,0.000200,2.895843
+TRXUSDT,15,0.031567,0.000132,0.031435,1.000000,57.078257,47.950326,555.466667,0.002104,inf
+BMEXUSD,112,0.022054,0.000082,0.021973,0.678571,43.518834,29.388881,881.250000,0.000197,4.430643
+XLMUSDT,50,0.015671,0.000290,0.015381,1.000000,7.919530,6.994642,66.660000,0.000313,inf
+BNBUSD,25,0.012015,0.000471,0.011544,1.000000,9.494785,9.885816,132.000000,0.000481,inf
+ETHUSDZ20,7,0.005585,0.000218,0.005367,1.000000,2.883927,2.883894,158.714286,0.000798,inf
+ADAUSDT,145,0.002437,-0.001997,0.004434,0.772414,21.781065,21.871271,3.751724,0.000017,7.884843
+ORDIUSD,9,-0.001095,0.000001,-0.001096,0.111111,2970.862047,3151.074591,7.111111,-0.000122,0.065799
+EOSH21,35,-0.029143,0.000839,-0.029982,0.000000,2.735730,1.792164,317.428571,-0.000833,0.000000
+XBTM21,18,-0.021913,0.013986,-0.035898,0.000000,0.009578,0.009577,18518.500000,-0.001217,0.000000
+LINKUSDTZ20,14,-0.037682,0.000375,-0.038057,0.000000,3.701088,2.144194,38.785714,-0.002692,0.000000
+ETHZ24,78,-0.051560,0.000595,-0.052155,0.333333,950.173330,1074.749912,69230.769231,-0.000661,0.281798
+TRXZ20,489,-0.102872,0.020011,-0.122883,0.541922,75.697014,75.194839,26018.748466,-0.000210,0.635518
+YFIUSDTZ20,490,-0.111012,0.013650,-0.124663,0.500000,93.694647,70.145009,52.712245,-0.000227,0.937222
+EOSUSDTZ20,6,-0.135042,0.002736,-0.137778,0.000000,37.781376,34.393109,1851.666667,-0.022507,0.000000
+LTCM21,165,-0.144165,-0.001203,-0.142962,0.230303,67.663718,57.233104,4.848485,-0.000874,0.121439
+BCHUSD,120,-0.188423,0.005682,-0.194106,0.416667,36.190675,31.912477,482.216667,-0.001570,0.527131
+BCHH21,95,-0.206840,0.000489,-0.207329,0.000000,112.244942,107.987322,5.315789,-0.002177,0.000000
+LTCZ21,121,-0.225212,-0.002306,-0.222906,0.322314,64.973804,52.159885,4129752066.115703,-0.001861,0.288533
+ETHH22,467,-0.235570,0.017960,-0.253529,0.357602,104.071509,72.382523,142372.591006,-0.000504,0.648215
+TRXZ21,122,-0.256901,-0.000832,-0.256069,0.098361,278.499992,364.796283,2868852459016.393555,-0.002106,0.034053
+ADAUSD,499,-0.418931,0.001067,-0.419998,0.150301,161.105184,166.554559,84.362725,-0.000840,0.090641
+ETHH23,386,-0.407367,0.050493,-0.457861,0.476684,91.943956,68.098933,270023.316062,-0.001055,0.531669
+DOTUSDT,3263,-0.583823,-0.031198,-0.552625,0.615385,83.175313,39.340799,10.583206,-0.000179,0.224572
+LTCM20,384,-0.523010,0.058048,-0.581058,0.325521,43.947686,27.856240,21.007812,-0.001362,0.284980
+ADAM20,347,-0.570261,0.058938,-0.629199,0.596542,40.268437,37.817071,14988.881844,-0.001643,0.541698
+ETHZ20,1111,-0.859290,0.101429,-0.960719,0.590459,56.654043,43.985245,8.063906,-0.000773,0.781844
+LTCU20,302,-0.919895,0.111542,-1.031437,0.271523,48.891812,37.863140,36.960265,-0.003046,0.256437
+ETHU24,155,-1.698549,0.002112,-1.700661,0.045161,1349.305389,1563.992409,90322.580645,-0.010958,0.002478
+
+```
+
+## 3. `outputs/counterfactuals.md`
+
+```markdown
+# Counterfactual Analysis
+
+All PnL figures in XBT.  Positive delta = counterfactual is better than actual.
+
+---
+
+## Scenario 1 — Remove Net-Negative Symbols
+
+Exclude any symbol whose total FIFO net PnL is negative over the full history.
+
+| Metric | Value |
+|--------|-------|
+| Actual net PnL | +141.5645 XBT |
+| Counterfactual net PnL | +149.7175 XBT |
+| Delta | **+8.1530 XBT** |
+| Symbols removed | ADAM20, ADAUSD, BCHH21, BCHUSD, DOTUSDT, EOSH21, EOSUSDTZ20, ETHH22, ETHH23, ETHU24, ETHZ20, ETHZ24, LINKUSDTZ20, LTCM20, LTCM21, LTCU20, LTCZ21, ORDIUSD, TRXZ20, TRXZ21 |
+
+---
+
+## Scenario 2 — Remove Quarterly Contracts
+
+Exclude all trades on quarterly / futures contracts (H/M/U/Z suffix).
+
+| Metric | Value |
+|--------|-------|
+| Actual net PnL | +141.5645 XBT |
+| Counterfactual net PnL | +134.6872 XBT |
+| Delta | **-6.8773 XBT** |
+| Quarterly contracts PnL (removed) | +6.8773 XBT |
+
+---
+
+## Scenario 3 — Convert All Taker Fills to Maker
+
+Re-price all taker executions at the instrument's maker fee rate.
+
+| Metric | Value |
+|--------|-------|
+| Actual total fees | +17.9158 XBT |
+| Counterfactual fees | +10.8783 XBT |
+| Estimated savings | **+7.0375 XBT** |
+| Taker fills converted | 85,903 |
+
+---
+
+## Scenario 4 — Symbol Stop-Loss Rule (2% equity, 12-month exclusion)
+
+When any non-core symbol's cumulative net loss exceeds 2% of current account
+equity, exclude it from trading for 12 months and reset the counter.
+
+| Metric | Value |
+|--------|-------|
+| Actual net PnL | +141.5645 XBT |
+| Counterfactual net PnL | +109.5685 XBT |
+| Delta | **-31.9960 XBT** |
+| Exclusion events triggered | 20 |
+
+```
+
+## 4. `outputs/pnl_reconciliation.csv`
+
+```csv
+symbol,fifo_xbt,wallet_xbt,abs_diff_xbt,rel_diff_pct,note
+UNIUSDT,4.323787,0.129890,4.193897,3228.808528,"USDT-settled: FIFO PnL in USDT, not XBt"
+LUNAUSD,7.777734,0.755353,7.022381,929.682581,
+ADAUSDT,0.004434,0.220290,0.215855,97.987072,"USDT-settled: FIFO PnL in USDT, not XBt"
+DOTUSDT,-0.552625,-7.150829,6.598204,92.271876,"USDT-settled: FIFO PnL in USDT, not XBt"
+XLMUSDT,0.015381,0.152318,0.136937,89.902241,"USDT-settled: FIFO PnL in USDT, not XBt"
+DOGEUSDT,0.413210,3.543889,3.130679,88.340217,"USDT-settled: FIFO PnL in USDT, not XBt"
+LINKUSDT,0.040142,0.307892,0.267750,86.962451,"USDT-settled: FIFO PnL in USDT, not XBt"
+BMEXUSD,0.021973,0.013158,0.008815,66.992909,
+LTCUSD,8.078851,5.115634,2.963217,57.924730,
+DOGEUSD,2.784668,2.209561,0.575107,26.028110,
+ADAUSD,-0.419998,-0.561072,0.141073,25.143574,
+XRPUSD,4.513693,3.611340,0.902353,24.986642,
+ETHM24,0.490740,0.404957,0.085782,21.183008,
+ETHUSD,43.981916,37.853486,6.128430,16.189871,
+AAVEUSDT,0.815255,0.717306,0.097950,13.655238,"USDT-settled: FIFO PnL in USDT, not XBt"
+BCHUSD,-0.194106,-0.219901,0.025796,11.730568,
+ORDIUSD,-0.001096,-0.001208,0.000113,9.317762,
+XBTUSD,41.885396,38.347731,3.537664,9.225224,
+AXSUSDT,0.848962,0.798066,0.050896,6.377425,
+TRXUSDT,0.031435,0.030059,0.001375,4.574999,"USDT-settled: FIFO PnL in USDT, not XBt"
+BNBUSDT,0.414657,0.397887,0.016771,4.214907,"USDT-settled: FIFO PnL in USDT, not XBt"
+XBTM21,-0.035898,-0.034868,0.001031,2.956544,
+BNBUSD,0.011544,0.011238,0.000306,2.718498,
+ALTMEXUSD,0.128156,0.127038,0.001118,0.880026,
+ETHU23,0.048081,0.048081,0.000000,0.000000,
+TRXZ20,-0.122883,-0.122883,0.000000,0.000000,
+YFIUSDTZ20,-0.124663,-0.124663,0.000000,0.000000,
+TRXU20,0.505251,0.505251,0.000000,0.000000,
+ETHU21,0.192053,0.192053,0.000000,0.000000,
+LTCZ21,-0.222906,-0.222906,0.000000,0.000000,
+LTCZ20,0.608249,0.608249,0.000000,0.000000,
+LTCM21,-0.142962,-0.142962,0.000000,0.000000,
+LTCM20,-0.581058,-0.581058,0.000000,0.000000,
+ETHM20,0.338076,0.338076,0.000000,0.000000,
+ETHM23,0.541635,0.541635,0.000000,0.000000,
+EOSUSDTZ20,-0.137778,-0.137778,0.000000,0.000000,
+BCHH21,-0.207329,-0.207329,0.000000,0.000000,
+ETHZ24,-0.052155,-0.052155,0.000000,0.000000,
+ETHUSDZ20,0.005367,0.005367,0.000000,0.000000,
+XTZUSDTZ20,0.103324,0.103324,0.000000,0.000000,
+EOSH21,-0.029982,-0.029982,0.000000,0.000000,
+ETHH23,-0.457861,-0.457861,0.000000,0.000000,
+TRXM20,0.338777,0.338777,0.000000,0.000000,
+LTCH21,0.496538,0.496538,0.000000,0.000000,
+TRXU21,0.228542,0.228542,0.000000,0.000000,
+ETHZ21,2.944745,2.944745,0.000000,0.000000,
+LTCU21,0.238490,0.238490,0.000000,0.000000,
+ADAM20,-0.629199,-0.629199,0.000000,0.000000,
+ETHU20,0.697975,0.697975,0.000000,0.000000,
+LTCU20,-1.031437,-1.031437,0.000000,0.000000,
+TRXM21,0.808430,0.808430,0.000000,0.000000,
+ETHZ22,0.343044,0.343044,0.000000,0.000000,
+DOTUSDTH21,0.236673,0.236673,0.000000,0.000000,
+ETHH22,-0.253529,-0.253529,0.000000,0.000000,
+TRXH21,0.770248,0.770248,0.000000,0.000000,
+ETHU24,-1.700661,-1.700661,0.000000,0.000000,
+ETHU22,0.106633,0.106633,0.000000,0.000000,
+ETHZ20,-0.960719,-0.960719,0.000000,0.000000,
+ETHM22,0.420293,0.420293,0.000000,0.000000,
+ETHH24,0.078392,0.078392,0.000000,0.000000,
+ETHM21,1.091912,1.091912,0.000000,0.000000,
+ETHH21,0.881734,0.881734,0.000000,0.000000,
+ETHZ23,0.227885,0.227885,0.000000,0.000000,
+LINKUSDTZ20,-0.038057,-0.038057,0.000000,0.000000,
+TRXZ21,-0.256069,-0.256069,0.000000,0.000000,
+YFIUSDTH21,1.119340,1.119340,0.000000,0.000000,
+
+```
+
+## 5. `outputs/yearly_summary.csv`
+
+```csv
+year,n_orders,n_fills,total_notional_xbt,gross_pnl_xbt,fees_xbt,net_pnl_xbt,deposits_xbt,withdrawals_xbt,year_end_equity_xbt,btc_share_pct
+2020,7123,21349,154809976.808236,8.768581,6.302804,2.465777,1.771991,0.000000,10.540571,0.010000
+2021,18019,78775,184857756.254533,56.322783,7.179317,49.143466,0.000000,16.001200,50.862155,0.010000
+2022,8593,25042,19906680.512762,2.467898,1.500188,0.967710,0.000000,50.100800,3.192633,0.030000
+2023,4423,11905,17058339.524886,10.442959,1.457206,8.985754,0.000000,0.000000,13.779392,0.010000
+2024,3019,14271,7588418.152505,2.539039,1.085459,1.453580,0.000000,0.000000,16.733544,0.030000
+2025,1913,8300,928.225029,9.588423,0.350858,9.237564,0.000000,0.000000,27.368030,100.000000
+2026,124,771,88.197978,3.072881,0.039964,3.032916,0.000000,0.000000,30.414842,100.000000
+
+```
+
+## 6. `outputs/symbol_pnl_ranking.csv` (full, not just top 30)
+
+```csv
+symbol,gross_pnl_xbt,fees_xbt,net_pnl_xbt,symbol_class
+XBTUSD,38.348638,0.000000,38.348638,xbt_perp
+ETHUSD,37.853486,0.000000,37.853486,eth_perp
+LTCUSD,5.115634,0.000000,5.115634,alt_perp
+XRPUSD,3.611340,0.000000,3.611340,alt_perp
+DOGEUSDT,3.543889,0.000000,3.543889,alt_perp
+ETHZ21,2.944745,0.000000,2.944745,quarterly
+DOGEUSD,2.209561,0.000000,2.209561,alt_perp
+YFIUSDTH21,1.119340,0.000000,1.119340,quarterly
+ETHM21,1.091912,0.000000,1.091912,quarterly
+ETHH21,0.881734,0.000000,0.881734,quarterly
+TRXM21,0.808430,0.000000,0.808430,quarterly
+AXSUSDT,0.798066,0.000000,0.798066,alt_perp
+TRXH21,0.770248,0.000000,0.770248,quarterly
+LUNAUSD,0.755353,0.000000,0.755353,alt_perp
+AAVEUSDT,0.717306,0.000000,0.717306,alt_perp
+ETHU20,0.697975,0.000000,0.697975,quarterly
+LTCZ20,0.608249,0.000000,0.608249,quarterly
+ETHM23,0.541635,0.000000,0.541635,quarterly
+TRXU20,0.505251,0.000000,0.505251,quarterly
+LTCH21,0.496538,0.000000,0.496538,quarterly
+ETHM22,0.420293,0.000000,0.420293,quarterly
+ETHM24,0.404957,0.000000,0.404957,quarterly
+BNBUSDT,0.397887,0.000000,0.397887,alt_perp
+ETHZ22,0.343044,0.000000,0.343044,quarterly
+TRXM20,0.338777,0.000000,0.338777,quarterly
+ETHM20,0.338076,0.000000,0.338076,quarterly
+LINKUSDT,0.307892,0.000000,0.307892,alt_perp
+LTCU21,0.238490,0.000000,0.238490,quarterly
+DOTUSDTH21,0.236673,0.000000,0.236673,quarterly
+TRXU21,0.228542,0.000000,0.228542,quarterly
+ETHZ23,0.227885,0.000000,0.227885,quarterly
+ADAUSDT,0.220290,0.000000,0.220290,alt_perp
+ETHU21,0.192053,0.000000,0.192053,quarterly
+XLMUSDT,0.152318,0.000000,0.152318,alt_perp
+UNIUSDT,0.129890,0.000000,0.129890,alt_perp
+ALTMEXUSD,0.127038,0.000000,0.127038,alt_perp
+ETHU22,0.106633,0.000000,0.106633,quarterly
+XTZUSDTZ20,0.103324,0.000000,0.103324,quarterly
+ETHH24,0.078392,0.000000,0.078392,quarterly
+ETHU23,0.048081,0.000000,0.048081,quarterly
+TRXUSDT,0.030059,0.000000,0.030059,alt_perp
+BMEXUSD,0.013158,0.000000,0.013158,alt_perp
+BNBUSD,0.011238,0.000000,0.011238,alt_perp
+ETHUSDZ20,0.005367,0.000000,0.005367,quarterly
+ORDIUSD,-0.001208,0.000000,-0.001208,alt_perp
+EOSH21,-0.029982,0.000000,-0.029982,quarterly
+XBTM21,-0.034868,0.000000,-0.034868,quarterly
+LINKUSDTZ20,-0.038057,0.000000,-0.038057,quarterly
+ETHZ24,-0.052155,0.000000,-0.052155,quarterly
+TRXZ20,-0.122883,0.000000,-0.122883,quarterly
+YFIUSDTZ20,-0.124663,0.000000,-0.124663,quarterly
+EOSUSDTZ20,-0.137778,0.000000,-0.137778,quarterly
+LTCM21,-0.142962,0.000000,-0.142962,quarterly
+BCHH21,-0.207329,0.000000,-0.207329,quarterly
+BCHUSD,-0.219901,0.000000,-0.219901,alt_perp
+LTCZ21,-0.222906,0.000000,-0.222906,quarterly
+ETHH22,-0.253529,0.000000,-0.253529,quarterly
+TRXZ21,-0.256069,0.000000,-0.256069,quarterly
+ETHH23,-0.457861,0.000000,-0.457861,quarterly
+ADAUSD,-0.561072,0.000000,-0.561072,alt_perp
+LTCM20,-0.581058,0.000000,-0.581058,quarterly
+ADAM20,-0.629199,0.000000,-0.629199,quarterly
+ETHZ20,-0.960719,0.000000,-0.960719,quarterly
+LTCU20,-1.031437,0.000000,-1.031437,quarterly
+ETHU24,-1.700661,0.000000,-1.700661,quarterly
+DOTUSDT,-7.150829,0.000000,-7.150829,alt_perp
+
+```
+
+## 7. `outputs/pyramid_stats.md`
+
+```markdown
+# Pyramid Episode Statistics
+
+Total episodes: **17,450**
+
+## Layer Counts
+- Average layers per episode: **9.19**
+- Median layers per episode: **4.0**
+
+## Price Spacing (inter-fill)
+- Average median spacing: **0.0320%**
+- Median of medians: **0.0000%**
+
+## Episode Notional (USD)
+- Average: **3,697,350,595**
+- Median: **392,128,095**
+
+## Direction Split
+| direction   |   count |
+|:------------|--------:|
+| Long        |    9100 |
+| Short       |    8350 |
+
+## Layer Count Distribution (top 15)
+|   n_layers |   count |
+|-----------:|--------:|
+|          1 |    4211 |
+|          2 |    2379 |
+|          3 |    1654 |
+|          4 |    1294 |
+|          5 |    1041 |
+|          6 |     833 |
+|          7 |     698 |
+|          8 |     589 |
+|          9 |     415 |
+|         10 |     364 |
+|         11 |     353 |
+|         12 |     303 |
+|         13 |     250 |
+|         14 |     233 |
+|         15 |     214 |
+
+## Top Symbols by Episode Count
+| symbol     |   n_episodes |   avg_layers |   med_layers |
+|:-----------|-------------:|-------------:|-------------:|
+| XBTUSD     |         9954 |         9.92 |            4 |
+| ETHUSD     |         1886 |         9.49 |            5 |
+| LTCUSD     |          732 |         9.01 |            5 |
+| DOGEUSD    |          700 |         5.22 |            3 |
+| XRPUSD     |          501 |        10.97 |            4 |
+| ETHZ21     |          302 |         2.88 |            2 |
+| ETHH21     |          205 |         5.55 |            3 |
+| DOGEUSDT   |          198 |         8.76 |            3 |
+| ETHZ20     |          187 |         6.24 |            3 |
+| YFIUSDTZ20 |          149 |         3.4  |            2 |
+
+## Maker % by Direction (entry vs exit proxy)
+| direction   |   avg_maker_pct |
+|:------------|----------------:|
+| Long        |        0.680624 |
+| Short       |        0.550994 |
+
+> Long episodes are typically entries (buying); Short episodes are exits (selling).
+> Higher maker_pct on exits = more patient limit-order exits (good).
+
+```
+
+## 8. `outputs/maker_taker_share.csv`
+
+```csv
+year,maker_fills,taker_fills,total_fills,maker_pct,taker_pct
+2020,8173,13176,21349,38.28,61.72
+2021,40796,37979,78775,51.79,48.21
+2022,9980,15062,25042,39.85,60.15
+2023,5602,6303,11905,47.06,52.94
+2024,5184,9087,14271,36.33,63.67
+2025,4063,4237,8300,48.95,51.05
+2026,712,59,771,92.35,7.65
+
+```
+
+## 9. `outputs/leverage_distribution.csv`
+
+```csv
+percentile,leverage
+5,0.9792
+10,0.9792
+25,0.9792
+50,0.9792
+75,0.9792
+90,0.9792
+95,0.9792
+99,0.9792
+mean,0.9792
+max,0.9792
+
+```
+
+## 10. `outputs/drawdown_top10.csv`
+
+```csv
+start_ts,trough_ts,end_ts,peak_xbt,trough_xbt,drawdown_pct,duration_days,recovery_days
+2021-10-07 12:00:00.032000+00:00,2022-02-22 12:23:45.473000+00:00,2026-04-17 12:14:50.533000+00:00,68.8681,0.0383,-99.9444,1653.0103,
+2020-06-24 12:00:00.002000+00:00,2020-07-24 12:00:00.005000+00:00,2020-08-14 12:00:00+00:00,5.1474,1.0120,-80.5904,51.0000,21.0000
+2020-09-23 12:00:00.016000+00:00,2020-11-06 12:00:00.003000+00:00,2020-11-26 12:00:00.006000+00:00,9.5415,3.6175,-62.2356,64.0000,20.0000
+2021-04-19 12:00:00.053000+00:00,2021-05-17 12:00:00.060000+00:00,2021-05-27 12:00:00.068000+00:00,60.7266,31.9971,-47.8012,38.0000,10.0000
+2020-05-04 12:00:00+00:00,2020-05-04 12:00:00+00:00,2020-05-07 12:00:00.005000+00:00,1.1663,1.1663,-37.8317,3.0000,3.0000
+2020-11-28 12:00:00.009000+00:00,2020-12-01 12:00:00.005000+00:00,2020-12-16 12:00:00.054000+00:00,9.5194,6.2076,-35.2062,18.0000,15.0000
+2020-12-21 12:00:00.050000+00:00,2021-01-07 12:00:00.052000+00:00,2021-01-14 12:00:00.047000+00:00,11.8986,8.0242,-32.5775,24.0000,7.0000
+2021-06-25 12:00:00.075000+00:00,2021-07-26 12:00:00.058000+00:00,2021-09-11 12:00:00.025000+00:00,60.7676,50.5292,-19.4498,78.0000,47.0000
+2021-01-26 12:00:00.044000+00:00,2021-01-28 12:00:00.063000+00:00,2021-01-28 12:00:00.063000+00:00,20.9984,20.5822,-15.1148,2.0000,0.0000
+2020-06-04 12:00:00.001000+00:00,2020-06-04 12:00:00.001000+00:00,2020-06-10 12:00:00.010000+00:00,3.5797,3.5797,-14.8143,6.0000,6.0000
+
+```
+
+## 11. `outputs/funding_yearly.csv`
+
+```csv
+year,funding_amount_xbt,funding_fee_xbt,funding_net_xbt
+2024,0.415113,0.555930,-0.140817
+2025,1.016663,1.521639,-0.504976
+2026,-0.026516,0.309825,-0.336341
+
+```
+
+## 12. `make all` log (last 80 lines)
+
+```
+06:46:28  INFO      Scenario 1: net-negative symbols…
+06:46:28  INFO        delta=8.1530 XBT
+06:46:28  INFO      Scenario 2: quarterly contracts…
+06:46:28  INFO        delta=-6.8773 XBT
+06:46:28  INFO      Scenario 3: taker→maker fee savings…
+06:46:31  INFO        savings=7.0375 XBT
+06:46:31  INFO      Scenario 4: symbol stop-loss rule…
+06:46:42  INFO        delta=-31.9960 XBT  exclusions=20
+06:46:42  INFO      Wrote /home/runner/work/coolish/coolish/analysis/coolish-strategy/outputs/counterfactuals.md
+06:46:42  INFO      07 complete.
+python scripts/08_strategy_spec.py
+06:46:42  INFO      === 08 — Strategy Spec ===
+06:46:42  INFO      Symbol whitelist (36 symbols): ['AAVEUSDT', 'ALTMEXUSD', 'AXSUSDT', 'BMEX_USDT', 'BNBUSDT', 'DOGEUSD', 'DOGEUSDT', 'DOTUSDTH21', 'ETHH21', 'ETHM20', 'ETHM21', 'ETHM22', 'ETHM23', 'ETHM24', 'ETHU20', 'ETHU21', 'ETHU22', 'ETHUSD', 'ETHZ21', 'ETHZ22', 'ETHZ23', 'LTCH21', 'LTCU21', 'LTCUSD', 'LTCZ20', 'LUNAUSD', 'TRXH21', 'TRXM20', 'TRXM21', 'TRXU20', 'TRXU21', 'UNIUSDT', 'XBTUSD', 'XRPUSD', 'XTZUSDTZ20', 'YFIUSDTH21']
+06:46:42  INFO      Max leverage (P95 ceiling): 1×
+06:46:42  INFO      Pyramid params: {'med_layers': 4.0, 'med_spacing_pct': 0.0, 'med_layer_qty': 12121.19696969697, 'med_notional_usd': 2665519700.0}
+06:46:42  INFO      Best counterfactual rule: Scenario 1 — Remove Net-Negative Symbols (delta = +8.1530 XBT)
+06:46:42  INFO      Wrote /home/runner/work/coolish/coolish/analysis/coolish-strategy/outputs/strategy_spec.md
+06:46:42  INFO      
+=== strategy_spec.md (first 60 lines) ===
+# Coolish-Style BTC Range-Pyramid Strategy — Specification
+
+> **Auto-generated** from the `data-` tag analysis pipeline.
+> All numbers derived from historical account data; none are hard-coded.
+
+---
+
+## 1. Approved Symbol Whitelist
+
+Only symbols with cumulative net PnL ≥ 0.1 XBT qualify:
+
+  - `AAVEUSDT` (alt_perp)
+  - `ALTMEXUSD` (alt_perp)
+  - `AXSUSDT` (alt_perp)
+  - `BMEX_USDT` (alt_perp)
+  - `BNBUSDT` (alt_perp)
+  - `DOGEUSD` (alt_perp)
+  - `DOGEUSDT` (alt_perp)
+  - `DOTUSDTH21` (quarterly)
+  - `ETHH21` (quarterly)
+  - `ETHM20` (quarterly)
+  - `ETHM21` (quarterly)
+  - `ETHM22` (quarterly)
+  - `ETHM23` (quarterly)
+  - `ETHM24` (quarterly)
+  - `ETHU20` (quarterly)
+  - `ETHU21` (quarterly)
+  - `ETHU22` (quarterly)
+  - `ETHUSD` (eth_perp)
+  - `ETHZ21` (quarterly)
+  - `ETHZ22` (quarterly)
+  - `ETHZ23` (quarterly)
+  - `LTCH21` (quarterly)
+  - `LTCU21` (quarterly)
+  - `LTCUSD` (alt_perp)
+  - `LTCZ20` (quarterly)
+  - `LUNAUSD` (alt_perp)
+  - `TRXH21` (quarterly)
+  - `TRXM20` (quarterly)
+  - `TRXM21` (quarterly)
+  - `TRXU20` (quarterly)
+  - `TRXU21` (quarterly)
+  - `UNIUSDT` (alt_perp)
+  - `XBTUSD` (xbt_perp)
+  - `XRPUSD` (alt_perp)
+  - `XTZUSDTZ20` (quarterly)
+  - `YFIUSDTH21` (quarterly)
+
+**Not-to-trade list:**
+- Any symbol not on the whitelist above
+- Quarterly / futures contracts (H/M/U/Z suffix) — historically near-zero or negative EV
+- New listings with < 90 days of history
+
+---
+
+## 2. Leverage Limit
+
+Maximum effective account leverage: **1×** (P95 of observed history, rounded up).
+
+- Keep liquidation price at least 3× current price away from entry.
+06:46:42  INFO      08 complete.
+
+```
+
+## 13. `pytest tests/ -v` (full output)
+
+```
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.3, pluggy-1.6.0 -- /home/runner/work/coolish/coolish/analysis/coolish-strategy/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/runner/work/coolish/coolish/analysis/coolish-strategy
+collecting ... collected 5 items
+
+tests/test_reconciliation.py::test_total_realised_pnl PASSED             [ 20%]
+tests/test_reconciliation.py::test_xbtusd_realised_pnl PASSED            [ 40%]
+tests/test_reconciliation.py::test_ethusd_realised_pnl PASSED            [ 60%]
+tests/test_reconciliation.py::test_fifo_basics PASSED                    [ 80%]
+tests/test_reconciliation.py::test_maker_rebate_preserved PASSED         [100%]
+
+============================== 5 passed in 0.36s ===============================
+
+```
