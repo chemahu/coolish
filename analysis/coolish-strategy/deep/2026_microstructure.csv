@@ -1,0 +1,12 @@
+metric_group,key,count,pct
+ordType,Limit,759,98.44
+ordType,Market,12,1.56
+lastLiquidityInd,AddedLiquidity,712,92.35
+lastLiquidityInd,RemovedLiquidity,59,7.65
+maker_pct,overall_2026,771,92.35
+daily_fills,mean,17,
+daily_fills,max,185,
+daily_fills,median,10,
+episode_layers,mean,8,
+episode_layers,max,123,
+episode_layers,median,4,
