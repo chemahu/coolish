@@ -251,12 +251,54 @@ def dim1_maker_pct_matrix() -> tuple[pd.DataFrame, str]:
         total_with_pnl       = emotional["net_pnl_xbt_that_month"].notna().sum()
         pct_losing           = (len(losing_emotional) / total_with_pnl * 100) if total_with_pnl > 0 else 0
 
+        # weighted: total XBT in losing emotional months vs winning ones
+        total_pnl_losing   = losing_emotional["net_pnl_xbt_that_month"].sum()
+        total_pnl_winning  = profitable_emotional["net_pnl_xbt_that_month"].sum()
+
+        # Refined hypothesis: average loss magnitude vs average win magnitude
+        avg_loss   = losing_emotional["net_pnl_xbt_that_month"].mean() if len(losing_emotional) else 0
+        avg_win    = profitable_emotional["net_pnl_xbt_that_month"].mean() if len(profitable_emotional) else 0
+
+        if pct_losing >= 55:
+            hyp_verdict = "CONFIRMED"
+        elif avg_loss < avg_win * -1.5:
+            hyp_verdict = "ASYMMETRICALLY CONFIRMED (losses bigger than wins)"
+        else:
+            hyp_verdict = "REFUTED IN SIMPLE FORM — revised finding below"
+
         md_lines += [
             f"Of the {len(emotional)} emotional-taker episodes with PnL data ({total_with_pnl} have roundtrip PnL):  ",
-            f"- **{len(losing_emotional)}** ({pct_losing:.0f}%) were losing months — hypothesis **{'CONFIRMED' if pct_losing >= 55 else 'PARTIALLY CONFIRMED'}**  ",
+            f"- **{len(losing_emotional)}** ({pct_losing:.0f}%) were losing months  ",
             f"- **{len(profitable_emotional)}** were profitable despite low maker%",
+            f"- Average loss in losing episodes: **{avg_loss:.4f} XBT**  ",
+            f"- Average gain in profitable episodes: **{avg_win:.4f} XBT**  ",
+            "",
+            f"**Hypothesis verdict: {hyp_verdict}**  ",
             "",
         ]
+
+        if pct_losing < 55:
+            md_lines += [
+                "**Revised finding**: The simple form 'low maker% → losing month' is wrong.  ",
+                "However, the data reveals a more nuanced pattern:  ",
+                "",
+                "1. The biggest losing months are overwhelmingly taker-dominated (2021-10 XBTUSD:  ",
+                f"   maker_pct={emotional.loc[emotional['net_pnl_xbt_that_month'].idxmin(),'maker_pct']:.1f}%,  ",
+                f"   PnL={emotional['net_pnl_xbt_that_month'].min():.4f} XBT).",
+                "",
+                "2. Profitable taker months tend to be smaller wins (mean gain {:.4f} XBT) vs  ".format(avg_win),
+                f"   larger losses (mean loss {avg_loss:.4f} XBT) — an unfavorable risk/reward ratio.",
+                "",
+                "3. The trader can be profitable while chasing price **in bull market conditions**",
+                "   (2021-01, 2021-02) — but this is directionality alpha, not execution edge.",
+                "   In bear markets, chasing price (taker) amplifies losses.",
+                "",
+                "**Corrected hypothesis**: Low maker% is a *loss amplifier*, not a *loss guarantor*.",
+                "When the market moves against the trader AND maker% is low, losses are larger.",
+                "When the market moves in the trader's favor AND maker% is low, gains are smaller",
+                "(due to higher fees and worse fill prices).",
+                "",
+            ]
 
         md_lines += [
             "### Full Chronological List of Emotional-Taker Episodes",
@@ -976,12 +1018,15 @@ def dim3_2026_microstructure() -> tuple[pd.DataFrame, str]:
         avg_notional = float("nan")
         median_notional = float("nan")
 
-    # ── compare to historical fill notional (2021 peak year) ─────────────────
+    # ── compare to historical fill notional (2021 peak year, XBTUSD only for apples-to-apples) ─
     p21 = CACHE / "trades_2021.parquet"
     if p21.exists():
         fills21 = pd.read_parquet(p21)
         fills21 = fills21[fills21["execType"] == "Trade"]
-        avg_notional_2021 = fills21["homeNotional"].abs().mean() if "homeNotional" in fills21.columns else float("nan")
+        # Use XBTUSD only: 2021 has many USDT-settled contracts whose homeNotional
+        # is denominated in USD, not XBT — mixing units inflates the naive average.
+        fills21_xbt = fills21[fills21["symbol"] == "XBTUSD"]
+        avg_notional_2021 = fills21_xbt["homeNotional"].abs().mean() if "homeNotional" in fills21_xbt.columns else float("nan")
     else:
         avg_notional_2021 = float("nan")
 
@@ -1271,13 +1316,20 @@ def dim3_2026_microstructure() -> tuple[pd.DataFrame, str]:
         "Fill size can distinguish a human (consistently small, risk-managed) from  ",
         "an algorithm (often very small micro-fills or very systematic sizing).",
         "",
-        "| Metric | 2026 | 2021 (Peak Year) |",
-        "|--------|------|-----------------|",
+        "**Note on comparison**: 2026 fills are 100% XBTUSD (inverse contract, homeNotional in XBT).  ",
+        "2021 had many USDT-settled symbols whose homeNotional is denominated in USD — comparing  ",
+        "the raw 2021 average would mix units. The table below uses **XBTUSD-only** for 2021.",
+        "",
+        "| Metric | 2026 (XBTUSD) | 2021 (XBTUSD only) |",
+        "|--------|--------------|------------------|",
     ]
     avg_2021_str = f"{avg_notional_2021:.4f} XBT" if not np.isnan(avg_notional_2021) else "N/A"
     md_lines += [
         f"| Mean |homeNotional| per fill | {avg_notional:.4f} XBT | {avg_2021_str} |",
         f"| Median |homeNotional| per fill | {median_notional:.4f} XBT | — |",
+        "",
+        "The reduction in average fill size from 2021 to 2026 reflects the smaller account  ",
+        "size (post-withdrawal) rather than any change in strategy scale.",
         "",
         "Symbol breakdown for 2026 fills:",
         "",

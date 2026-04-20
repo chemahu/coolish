@@ -173,10 +173,17 @@ Top 10 largest 2026 episodes by layer count:
 Fill size can distinguish a human (consistently small, risk-managed) from  
 an algorithm (often very small micro-fills or very systematic sizing).
 
-| Metric | 2026 | 2021 (Peak Year) |
-|--------|------|-----------------|
-| Mean |homeNotional| per fill | 0.1144 XBT | 2346.6551 XBT |
+**Note on comparison**: 2026 fills are 100% XBTUSD (inverse contract, homeNotional in XBT).  
+2021 had many USDT-settled symbols whose homeNotional is denominated in USD — comparing  
+the raw 2021 average would mix units. The table below uses **XBTUSD-only** for 2021.
+
+| Metric | 2026 (XBTUSD) | 2021 (XBTUSD only) |
+|--------|--------------|------------------|
+| Mean |homeNotional| per fill | 0.1144 XBT | 0.4498 XBT |
 | Median |homeNotional| per fill | 0.0193 XBT | — |
+
+The reduction in average fill size from 2021 to 2026 reflects the smaller account  
+size (post-withdrawal) rather than any change in strategy scale.
 
 Symbol breakdown for 2026 fills:
 

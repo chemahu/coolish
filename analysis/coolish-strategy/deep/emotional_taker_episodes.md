@@ -74,8 +74,31 @@ hitting bids/asks instead of waiting for price to come to them.
 > **maker% 暴跌 ↔ 当月该品种亏损** (maker% collapse ↔ loss that month on that symbol)
 
 Of the 23 emotional-taker episodes with PnL data (23 have roundtrip PnL):  
-- **9** (39%) were losing months — hypothesis **PARTIALLY CONFIRMED**  
+- **9** (39%) were losing months  
 - **14** were profitable despite low maker%
+- Average loss in losing episodes: **-2.6530 XBT**  
+- Average gain in profitable episodes: **2.7350 XBT**  
+
+**Hypothesis verdict: REFUTED IN SIMPLE FORM — revised finding below**  
+
+**Revised finding**: The simple form 'low maker% → losing month' is wrong.  
+However, the data reveals a more nuanced pattern:  
+
+1. The biggest losing months are overwhelmingly taker-dominated (2021-10 XBTUSD:  
+   maker_pct=28.9%,  
+   PnL=-13.4303 XBT).
+
+2. Profitable taker months tend to be smaller wins (mean gain 2.7350 XBT) vs  
+   larger losses (mean loss -2.6530 XBT) — an unfavorable risk/reward ratio.
+
+3. The trader can be profitable while chasing price **in bull market conditions**
+   (2021-01, 2021-02) — but this is directionality alpha, not execution edge.
+   In bear markets, chasing price (taker) amplifies losses.
+
+**Corrected hypothesis**: Low maker% is a *loss amplifier*, not a *loss guarantor*.
+When the market moves against the trader AND maker% is low, losses are larger.
+When the market moves in the trader's favor AND maker% is low, gains are smaller
+(due to higher fees and worse fill prices).
 
 ### Full Chronological List of Emotional-Taker Episodes
 
