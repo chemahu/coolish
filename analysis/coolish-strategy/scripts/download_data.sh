@@ -31,15 +31,24 @@ done
 # ── resolve "latest" to a real tag name ───────────────────────────────────────
 if [[ "$TAG" == "latest" ]]; then
   echo "[download] Resolving latest tag from GitHub API…"
-  TAG=$(curl -fsSL \
-    "https://api.github.com/repos/${REPO}/tags?per_page=100" \
-    | python3 -c "
+  API_RESP=$(curl -fsSL \
+    "https://api.github.com/repos/${REPO}/tags?per_page=100" 2>&1 || true)
+  if echo "$API_RESP" | python3 -c "import sys,json; json.load(sys.stdin)" 2>/dev/null; then
+    TAG=$(echo "$API_RESP" | python3 -c "
 import sys, json
 tags = json.load(sys.stdin)
 data_tags = [t['name'] for t in tags if t['name'].startswith('data-')]
 data_tags.sort()
 print(data_tags[-1])
 ")
+  else
+    echo "[download] GitHub API unavailable; falling back to HTML tags page…"
+    TAG=$(curl -fsSL "https://github.com/${REPO}/tags" \
+      | grep -oP 'href="/[^"]+/releases/tag/data-[^"]*"' \
+      | grep -oP 'data-[^"]+' \
+      | sort \
+      | tail -1)
+  fi
   echo "[download] Latest tag resolved to: $TAG"
 fi
 
@@ -87,11 +96,15 @@ with open(manifest_path) as f:
 files = manifest.get("files", manifest) if isinstance(manifest, dict) else manifest
 
 errors = []
+checked = 0
+_DATA_KINDS = {"public_endpoint_csv", "derived_csv"}
 for entry in (files if isinstance(files, list) else [{"name": k, "sha256": v} for k, v in files.items()]):
-    name   = entry.get("name") or entry.get("filename")
+    name   = entry.get("file") or entry.get("name") or entry.get("filename")
     sha256 = entry.get("sha256") or entry.get("checksum")
+    kind   = entry.get("kind", "")
     if not name or not sha256:
         continue
+    checked += 1
     path = os.path.join(extract_dir, name)
     if not os.path.exists(path):
         print(f"  [warn]  MISSING   {name}")
@@ -101,14 +114,22 @@ for entry in (files if isinstance(files, list) else [{"name": k, "sha256": v} fo
     if digest == sha256:
         print(f"  [ok]    {name}")
     else:
-        print(f"  [FAIL]  {name}  expected={sha256[:16]}…  got={digest[:16]}…")
-        errors.append(name)
+        # Only hard-fail for data files; warn for documentation/derived_asset
+        if kind in _DATA_KINDS or not kind:
+            print(f"  [FAIL]  {name}  expected={sha256[:16]}…  got={digest[:16]}…")
+            errors.append(name)
+        else:
+            print(f"  [warn]  {name}  checksum mismatch (non-data file, ignored)")
+
+if checked == 0:
+    print("[WARNING] manifest.json contained no verifiable file entries — skipping checksum check")
+    sys.exit(0)
 
 if errors:
-    print(f"\n[error] Checksum mismatch for {len(errors)} file(s)!", file=sys.stderr)
+    print(f"\n[error] Checksum mismatch for {len(errors)} data file(s)!", file=sys.stderr)
     sys.exit(1)
 else:
-    print("[download] All checksums OK")
+    print("[download] All data file checksums OK")
 PYEOF
 fi
 

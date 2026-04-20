@@ -37,8 +37,18 @@ MIN_PNL_XBT  = 0.1   # minimum net PnL for a symbol to be on the whitelist
 
 
 def _load_roundtrips() -> pd.DataFrame:
-    """Load round-trip parquet files produced by script 03."""
+    """Load round-trip parquet files produced by script 03.
+
+    Priority: ``roundtrips_all.parquet`` (full run) → individual symbol files.
+    """
     outputs = PROJECT_ROOT / "outputs"
+
+    # Prefer the complete all-symbols file
+    full_path = outputs / "roundtrips_all.parquet"
+    if full_path.exists():
+        return pd.read_parquet(full_path)
+
+    # Fall back to per-symbol files
     frames = []
     for fname in ("roundtrips_xbtusd.parquet", "roundtrips_ethusd.parquet"):
         p = outputs / fname
@@ -46,11 +56,6 @@ def _load_roundtrips() -> pd.DataFrame:
             frames.append(pd.read_parquet(p))
         else:
             logger.warning("Missing %s", p)
-
-    # Also try to load a full round-trip file if it exists
-    full_path = outputs / "roundtrips_all.parquet"
-    if full_path.exists():
-        frames.append(pd.read_parquet(full_path))
 
     if not frames:
         return pd.DataFrame()

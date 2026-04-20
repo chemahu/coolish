@@ -138,11 +138,13 @@ class _FifoMatcher:
         if self.is_inverse and open_px > 0 and close_px > 0:
             # Inverse: 1 contract = 1 USD; settled in XBT
             # PnL (XBT) = qty × (1/open - 1/close) × sign
+            # multiplier is not used for inverse contracts
             return float(qty) * (1.0 / open_px - 1.0 / close_px) * sign
         else:
             # Linear / quanto
-            # multiplier is in XBt per contract per unit price; convert → XBT
-            mult_xbt = abs(self.multiplier) / 1e8 if self.multiplier != 0 else 1e-8
+            # multiplier is in XBt per contract per unit price move; convert → XBT
+            # Do NOT use abs(): sign of multiplier determines direction of PnL
+            mult_xbt = self.multiplier / 1e8 if self.multiplier != 0 else 1e-8
             return float(qty) * (close_px - open_px) * sign * mult_xbt
 
     def _drain_queue(
@@ -317,9 +319,9 @@ def run_fifo(
             mult   = float(row.get("multiplier", 0) or 0)
             inst_idx[sym] = (is_inv, mult)
 
-    # Filter to Trade execTypes only
+    # Filter to Trade and Settlement execTypes (Settlement closes quarterly futures)
     if "execType" in trades.columns:
-        fills = trades[trades["execType"] == "Trade"].copy()
+        fills = trades[trades["execType"].isin(["Trade", "Settlement"])].copy()
     else:
         fills = trades.copy()
 
@@ -344,9 +346,9 @@ def run_fifo(
         side = str(row["side"])
 
         exec_comm = row.get("execComm", 0)
-        # execComm is negative in BitMEX API (money leaving the account).
-        # We represent fees as positive values (cost paid).
-        fee_xbt   = abs(float(exec_comm or 0)) / 1e8  # satoshis → XBT
+        # execComm: positive = user paid fees, negative = maker rebate (user received).
+        # Preserve the sign so that rebates reduce net cost instead of inflating it.
+        fee_xbt   = float(exec_comm or 0) / 1e8  # satoshis → XBT; sign preserved
 
         matchers[sym].process_fill(side=side, qty=qty, px=px, ts=ts, fee_xbt=fee_xbt)
 
