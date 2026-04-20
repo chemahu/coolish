@@ -143,19 +143,20 @@ def _scenario3(trades: pd.DataFrame, instruments: pd.DataFrame) -> dict:
     taker_fills = fills[taker_mask].copy()
 
     actual_fees_xbt = fills["execComm"].fillna(0).astype(float).sum() * SAT_TO_XBT
-    actual_fees_xbt = abs(actual_fees_xbt)
 
-    # Estimate counterfactual fees for taker fills if they were maker
+    # Counterfactual: if all taker fills had been maker fills
+    # Use execCost (position cost in XBt satoshi) × makerFee to compute the
+    # hypothetical maker commission.  This avoids needing to invert prices
+    # (which fails for XBt-quoted contracts like ADAM20 where px ≈ 5e-6).
     cf_savings = 0.0
     for _, row in taker_fills.iterrows():
-        sym   = str(row["symbol"])
-        qty   = float(row.get("lastQty", 0) or 0)
-        px    = float(row.get("lastPx", 0) or 0)
-        notional_xbt = qty / px if px != 0 else 0.0  # inverse contract
+        sym       = str(row["symbol"])
+        exec_cost = abs(float(row.get("execCost", 0) or 0))   # position cost in XBt sat
 
-        maker_f, taker_f = inst_fees.get(sym, (0.0, 0.00075))
-        saving_rate = taker_f - maker_f  # e.g. 0.00075 - (-0.00025) = 0.001
-        cf_savings += notional_xbt * saving_rate
+        maker_f, taker_f = inst_fees.get(sym, (-0.00025, 0.00075))
+        actual_comm  = float(row.get("execComm", 0) or 0)     # sat
+        cf_comm      = exec_cost * maker_f                     # sat (maker_f can be negative)
+        cf_savings  += (actual_comm - cf_comm) * SAT_TO_XBT   # XBT saved
 
     return {
         "actual_fees_xbt":  actual_fees_xbt,

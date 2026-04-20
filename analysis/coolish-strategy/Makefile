@@ -33,3 +33,4 @@ data:
 
 clean:
 	rm -rf outputs/* data/*
+	rm -rf outputs/cache/

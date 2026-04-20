@@ -175,6 +175,19 @@ def _pyramid_stats_md(episodes: pd.DataFrame) -> str:
         top_syms.to_markdown(),
         "",
     ]
+
+    # Maker pct by direction (entry vs exit proxy)
+    if "maker_pct" in episodes.columns:
+        mp = episodes.groupby("direction")["maker_pct"].mean().rename("avg_maker_pct").reset_index()
+        lines += [
+            "## Maker % by Direction (entry vs exit proxy)",
+            mp.to_markdown(index=False),
+            "",
+            "> Long episodes are typically entries (buying); Short episodes are exits (selling).",
+            "> Higher maker_pct on exits = more patient limit-order exits (good).",
+            "",
+        ]
+
     return "\n".join(lines)
 
 
@@ -186,9 +199,9 @@ def main() -> None:
 
     trades = load_trades()
 
-    # Identify episodes (all symbols)
+    # Identify episodes (all symbols, gap_minutes=8)
     logger.info("Identifying pyramid episodes…")
-    episodes = identify_episodes(trades, gap_minutes=30)
+    episodes = identify_episodes(trades, gap_minutes=8)
 
     if not episodes.empty:
         episodes.to_parquet(
