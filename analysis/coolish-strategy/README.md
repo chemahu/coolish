@@ -81,6 +81,7 @@ analysis/coolish-strategy/
 | `06`   | `06_funding_cashflow.py` | Funding cashflow; withdrawal vs equity high; deposit vs drawdown |
 | `07`   | `07_counterfactual.py` | Four counterfactual scenarios |
 | `08`   | `08_strategy_spec.py` | Templated strategy rule book |
+| `09`   | `09_backtest_replica.py` | Forward-test of the distilled rules (skeleton) |
 
 ---
 
@@ -107,6 +108,9 @@ analysis/coolish-strategy/
 | `outputs/deposit_vs_drawdown.png` | Scatter: drawdown depth at deposit vs deposit size |
 | `outputs/counterfactuals.md` | Four counterfactual scenario results |
 | `outputs/strategy_spec.md` | Auto-generated clone-ready strategy rule book |
+| `outputs/replica_equity_curve.csv` | Daily equity from `09_backtest_replica.py` |
+| `outputs/replica_trades.csv` | Every simulated fill from the replica backtest |
+| `outputs/replica_summary.md` | Replica backtest headline metrics + baseline comparison |
 | `outputs/cache/trades_<year>.parquet` | Trade history split by year (intermediate cache) |
 
 ---
@@ -127,6 +131,60 @@ analysis/coolish-strategy/
 Script `03_fifo_roundtrip.py` cross-checks the FIFO aggregate net PnL against
 `walletHistory` realised PnL.  If the relative difference exceeds **0.5%**,
 the script exits with a non-zero code, stopping `make all`.
+
+---
+
+## Replica Backtest (`make 09`)
+
+`scripts/09_backtest_replica.py` is a forward-looking **skeleton backtester**
+that encodes the rules distilled from steps 01–08 + the four counterfactuals:
+
+- Whitelist of XBTUSD/ETHUSD core + LTCUSD/XRPUSD/DOGEUSD secondary;
+  quarterly contracts allowed (counterfactual ② → +6.88 XBT); 20 net-negative
+  symbols blacklisted (counterfactual ① → +8.15 XBT).
+- Maker-only fills at the BitMEX rebate (counterfactual ③ → +7.04 XBT).
+- **No stop-loss** — counterfactual ④ proved a 2 %-equity stop costs −32 XBT.
+- 4-layer pyramid mean-reversion at ~0.5 % spacing, exit on revert to VWAP.
+- Concurrency cap of 8 symbols; funding-rate filter at ±5 bps.
+
+The complete spec lives in the `STRATEGY_SPEC` dict at the top of the script,
+making it easy to sweep parameters.
+
+### Usage
+
+```bash
+# Built-in synthetic self-test (no external data needed):
+make 09
+
+# Real backtest against your own OHLCV bars CSV:
+make 09 BARS=/path/to/bars.csv
+```
+
+Bars CSV schema (UTF-8, header required):
+
+```
+timestamp,symbol,open,high,low,close,funding_rate
+2020-05-01T00:00:00Z,XBTUSD,8800.0,8830.0,8770.0,8810.0,0.0001
+```
+
+`funding_rate` is optional; consulted only at 8h boundaries.
+
+### Baseline reference
+
+PR #5 reported a real cumulative net PnL of **+141.56 XBT** across 6 years.
+Subtracting the unreproducible BMEX_USDT windfall (+19.76 XBT) leaves a
+clone-able baseline of **~122 XBT**. A successful replica run on a comparable
+data window should land in the same order of magnitude.
+
+### Known skeleton limitations
+
+- All symbols are treated as linear (USD-margined) — XBTUSD's inverse
+  contract PnL formula is **not** yet wired in. Refining this is a TODO.
+- The mean-reversion entry trigger uses a single-bar open/close compare;
+  a real implementation should use a band (Bollinger / Keltner) or
+  microstructure signal.
+- Funding payments are filtered, not paid; add an 8h accrual loop to
+  reflect them in equity.
 
 ---
 

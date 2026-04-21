@@ -1,6 +1,7 @@
-.PHONY: all data clean 01 02 03 04 05 06 07 08
+.PHONY: all data clean 01 02 03 04 05 06 07 08 09
 
 DATA_TAG ?= latest
+BARS ?=
 
 all: data 01 02 03 04 05 06 07 08
 
@@ -30,6 +31,9 @@ data:
 
 08:
 	python scripts/08_strategy_spec.py
+
+09:
+	python scripts/09_backtest_replica.py $(if $(BARS),--bars $(BARS),--synthetic)
 
 clean:
 	rm -rf outputs/* data/*

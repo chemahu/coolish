@@ -1,0 +1,72 @@
+name: Copilot Setup Steps
+
+# Pre-fetch the upstream BTC dataset BEFORE the sandbox firewall activates.
+# This step runs as part of the Copilot coding agent bootstrap, giving the
+# agent access to the data even when api.github.com / codeload.github.com
+# are blocked by the firewall.
+#
+# Reference: https://docs.github.com/en/copilot/customizing-copilot/customizing-the-development-environment-for-copilot-coding-agent
+
+on:
+  workflow_dispatch:
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Python 3.12 dependencies
+        working-directory: analysis/coolish-strategy
+        run: pip install -r requirements.txt --quiet
+
+      - name: Pre-fetch BitMEX dataset (data-2026-04-17)
+        working-directory: analysis/coolish-strategy
+        run: |
+          set -euo pipefail
+          mkdir -p data
+
+          # Resolve latest data tag from GitHub API (or fall back to hard-coded tag)
+          echo "[setup] Fetching latest data tag from GitHub API..."
+          API_RESP=$(curl -fsSL --max-time 30 \
+            "https://api.github.com/repos/bwjoke/BTC-Trading-Since-2020/tags?per_page=100" \
+            2>/dev/null || echo "[]")
+
+          TAG=$(echo "$API_RESP" | python3 -c "
+          import sys, json
+          try:
+              tags = json.load(sys.stdin)
+              data_tags = [t['name'] for t in tags if t['name'].startswith('data-')]
+              data_tags.sort()
+              print(data_tags[-1] if data_tags else 'data-2026-04-17')
+          except Exception:
+              print('data-2026-04-17')
+          " 2>/dev/null || echo "data-2026-04-17")
+
+          echo "[setup] Using tag: $TAG"
+
+          ARCHIVE_URL="https://github.com/bwjoke/BTC-Trading-Since-2020/archive/refs/tags/${TAG}.tar.gz"
+          ARCHIVE_FILE="data/${TAG}.tar.gz"
+          EXTRACT_DIR="data/${TAG}"
+
+          if [[ ! -f "$ARCHIVE_FILE" ]]; then
+            echo "[setup] Downloading $ARCHIVE_URL ..."
+            curl -fsSL --retry 3 --retry-delay 5 -o "$ARCHIVE_FILE" "$ARCHIVE_URL"
+            echo "[setup] Download complete: $(du -sh "$ARCHIVE_FILE" | cut -f1)"
+          else
+            echo "[setup] Archive already cached: $ARCHIVE_FILE"
+          fi
+
+          if [[ ! -d "$EXTRACT_DIR" ]]; then
+            echo "[setup] Extracting archive..."
+            mkdir -p "$EXTRACT_DIR"
+            tar -xzf "$ARCHIVE_FILE" -C "$EXTRACT_DIR" --strip-components=1
+          else
+            echo "[setup] Extract dir already exists: $EXTRACT_DIR"
+          fi
+
+          echo "[setup] Dataset files:"
+          ls -lh "$EXTRACT_DIR"/*.csv 2>/dev/null || true
+          echo "[setup] Pre-fetch complete."
